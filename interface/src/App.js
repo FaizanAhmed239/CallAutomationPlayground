@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Button } from "react-bootstrap";
 import withStyles from "@material-ui/core/styles/withStyles";
 import Typography from "@material-ui/core/Typography";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -45,8 +44,7 @@ const App = ({ classes }) => {
   const [transcribeTimeout, setTranscribeTimout] = useState(5);
   const [stopTranscriptionSession, setStopTranscriptionSession] =
     useState(false);
-
-  const intervalRef = useRef(null);
+  const [isFirstPressedText, setIsFirstPressedText] = useState(true);
 
   const stopTranscriptionSessionRef = useRef(stopTranscriptionSession);
   stopTranscriptionSessionRef.current = stopTranscriptionSession;
@@ -162,8 +160,30 @@ const App = ({ classes }) => {
   const modelOptions = ["tiny", "base", "small", "medium", "large", "large-v1"];
 
   useEffect(() => {
-    return () => clearInterval(intervalRef.current);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    // Remove the event listener when the component unmounts
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
   }, []);
+
+  const handleKeyDown = (event) => {
+    if (event.code === "Space") {
+      setIsRecording(true);
+      setIsFirstPressedText(false);
+      startRecording();
+    }
+  };
+
+  const handleKeyUp = (event) => {
+    if (event.code === "Space") {
+      setIsRecording(false);
+      stopRecording();
+      setIsTranscribing(true);
+    }
+  };
 
   function handleTranscribeTimeoutChange(newTimeout) {
     setTranscribeTimout(newTimeout);
@@ -171,32 +191,19 @@ const App = ({ classes }) => {
 
   function startRecording() {
     setStopTranscriptionSession(false);
-    setIsRecording(true);
-    intervalRef.current = setInterval(
-      transcribeInterim,
-      transcribeTimeout * 1000
-    );
   }
 
   function stopRecording() {
-    clearInterval(intervalRef.current);
     setStopTranscriptionSession(true);
-    setIsRecording(false);
-    setIsTranscribing(false);
   }
 
   function onData(recordedBlob) {
-    // console.log('chunk of real-time data is: ', recordedBlob);
+    // console.log(recordedBlob);
   }
 
   function onStop(recordedBlob) {
     transcribeRecording(recordedBlob);
     setIsTranscribing(true);
-  }
-
-  function transcribeInterim() {
-    clearInterval(intervalRef.current);
-    setIsRecording(false);
   }
 
   function transcribeRecording(recordedBlob) {
@@ -212,10 +219,6 @@ const App = ({ classes }) => {
       .then((res) => {
         setTranscribedData((oldData) => [...oldData, res.data]);
         setIsTranscribing(false);
-        intervalRef.current = setInterval(
-          transcribeInterim,
-          transcribeTimeout * 1000
-        );
       });
 
     if (!stopTranscriptionSessionRef.current) {
@@ -246,24 +249,13 @@ const App = ({ classes }) => {
           onTranscribeTiemoutChanged={handleTranscribeTimeoutChange}
         />
       </div>
-      <div className={classes.buttonsSection}>
-        {!isRecording && !isTranscribing && (
-          <Button onClick={startRecording} variant="primary">
-            Start transcribing
-          </Button>
-        )}
-        {(isRecording || isTranscribing) && (
-          <Button
-            onClick={stopRecording}
-            variant="danger"
-            disabled={stopTranscriptionSessionRef.current}
-          >
-            Stop
-          </Button>
-        )}
-      </div>
 
-      <div className="recordIllustration">
+      <div
+        className="recordIllustration"
+        style={{
+          marginTop: 60,
+        }}
+      >
         <ReactMic
           record={isRecording}
           className="sound-wave"
@@ -273,18 +265,36 @@ const App = ({ classes }) => {
           backgroundColor="#f6f6ef"
         />
       </div>
-
-      <div>
-        <TranscribeOutput
-          transcribedText={transcribedData}
-          interimTranscribedText={interimTranscribedData}
-        />
-        <PulseLoader
-          sizeUnit={"px"}
-          size={20}
-          color="purple"
-          loading={isTranscribing}
-        />
+      <div
+        style={{
+          border: "0.5px solid rgba(201,201,201,0.5)",
+          paddingTop: 20,
+          paddingBottom: 20,
+          paddingLeft: 15,
+          paddingRight: 15,
+          marginTop: 80,
+          borderRadius: 8,
+          boxShadow:
+            "rgba(0, 0, 0, 0.1) 0px 3px 26px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
+          width: "40%",
+        }}
+      >
+        <div>
+          <div style={{ color: "gray", fontWeight: 500, fontSize: 18 }}>
+            {isFirstPressedText &&
+              "Press and hold space bar to start conversing."}
+          </div>
+          <TranscribeOutput
+            transcribedText={transcribedData}
+            interimTranscribedText={interimTranscribedData}
+          />
+          <PulseLoader
+            sizeUnit={"px"}
+            size={20}
+            color="purple"
+            loading={isTranscribing}
+          />
+        </div>
       </div>
     </div>
   );
