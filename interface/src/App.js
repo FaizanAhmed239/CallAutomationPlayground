@@ -250,7 +250,12 @@ const App = ({ classes }) => {
         />
       </div>
 
-      <div className="recordIllustration">
+      <div
+        className="recordIllustration"
+        style={{
+          marginTop: 60,
+        }}
+      >
         <ReactMic
           record={isRecording}
           className="sound-wave"
@@ -267,7 +272,7 @@ const App = ({ classes }) => {
           paddingBottom: 20,
           paddingLeft: 15,
           paddingRight: 15,
-          marginTop: 60,
+          marginTop: 80,
           borderRadius: 8,
           boxShadow:
             "rgba(0, 0, 0, 0.1) 0px 3px 26px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
