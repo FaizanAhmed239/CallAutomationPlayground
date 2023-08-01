@@ -8,6 +8,8 @@ import SettingsSections from "./SettingsSection";
 import { ReactMic } from "react-mic";
 import axios from "axios";
 import { PulseLoader } from "react-spinners";
+import { PiRecordFill } from "react-icons/pi";
+import { MdOutlinePhonePaused } from "react-icons/md";
 
 const useStyles = () => ({
   root: {
@@ -31,6 +33,13 @@ const useStyles = () => ({
   },
   recordIllustration: {
     width: "100px",
+  },
+  iconDiv: {
+    marginTop: "30px",
+    width: "630px",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
 });
 
@@ -249,6 +258,27 @@ const App = ({ classes }) => {
           onTranscribeTiemoutChanged={handleTranscribeTimeoutChange}
         />
       </div>
+
+      {!isFirstPressedText && !isRecording && (
+        <div className={classes.iconDiv}>
+          <MdOutlinePhonePaused
+            size={25}
+            style={{
+              marginRight: "20px",
+              alignContent: "center",
+              justifyContent: "center",
+            }}
+          />
+          Call Paused
+        </div>
+      )}
+
+      {!isFirstPressedText && isRecording && (
+        <div className={classes.iconDiv}>
+          <PiRecordFill size={25} color="red" style={{ marginRight: "20px" }} />
+          Listening . . . . .
+        </div>
+      )}
 
       <div
         className="recordIllustration"
