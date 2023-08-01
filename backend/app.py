@@ -35,7 +35,6 @@ def load_model_and_tokenizer():
             loaded_tokenizer = pickle.load(f)
 
 
-
 def predict_label(input_string, tokenizer, model):
 
     # Tokenize the new input string and convert it into a sequence of indices
@@ -59,7 +58,6 @@ def predict_label(input_string, tokenizer, model):
 
     print(f"Predicted ID for '{input_string}': {predicted_id}\n\n")
     return predicted_id
-
 
 
 # Call the function to load the model and tokenizer when the script starts
@@ -89,16 +87,18 @@ def transcribe():
         else:
             result = audio_model.transcribe(save_path)
         
-        print (result)
-        processed_text = punctuation_remover(result['text'])
-        processed_text = modify_consecutive_words(processed_text)
-        print (processed_text+'<<<<<<')
+        if result and result['text'] != '':
+            print(result)
+            processed_text = punctuation_remover(result['text'])
+            processed_text = modify_consecutive_words(processed_text)
+            print (processed_text+'<<<<<<')
 
-        predicted_label= predict_label(processed_text,loaded_tokenizer,loaded_model)
-        print(predicted_label)
+            predicted_label= predict_label(processed_text,loaded_tokenizer,loaded_model)
+            print(predicted_label)
 
-        # Play the corresponding audio file
-        play_audio(predicted_label)
+            # Play the corresponding audio file
+            play_audio(predicted_label)
+        
 
         return result['text']
     else:
