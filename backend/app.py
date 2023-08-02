@@ -12,8 +12,8 @@ import tempfile
 import flask
 from flask import request
 from flask_cors import CORS
+from flask import jsonify
 import whisper
-import pygame
 
 
 app = flask.Flask(__name__)
@@ -25,6 +25,7 @@ loaded_model = None
 loaded_tokenizer = None
 whisper_model = None
 
+
 def load_model_and_tokenizer():
     global loaded_model, loaded_tokenizer, whisper_model
 
@@ -32,7 +33,8 @@ def load_model_and_tokenizer():
 
     if loaded_model is None and loaded_tokenizer is None:
         # Load the model from the file
-        loaded_model = load_model('./my_model_2023-07-26_accuracy_0.941_loss_0.314_10.h5')
+        loaded_model = load_model(
+            './my_model_2023-07-26_accuracy_0.941_loss_0.314_10.h5')
         # Load the saved tokenizer
         with open('./tokenizer_2023-07-26_accuracy_0.941_loss_0.314_10.pkl', 'rb') as f:
             loaded_tokenizer = pickle.load(f)
@@ -48,7 +50,8 @@ def predict_label(input_string, tokenizer, model):
     max_sequence_length = 10
 
     # Pad the sequence to match the same length as the sequences used during training
-    new_input_sequence = pad_sequences(new_input_tokens, maxlen=max_sequence_length, padding='post')
+    new_input_sequence = pad_sequences(
+        new_input_tokens, maxlen=max_sequence_length, padding='post')
 
     # Add an extra dimension to the input data (samples, timesteps, features)
     new_input_sequence = new_input_sequence.reshape(-1, max_sequence_length, 1)
@@ -66,6 +69,7 @@ def predict_label(input_string, tokenizer, model):
 # Call the function to load the model and tokenizer when the script starts
 load_model_and_tokenizer()
 
+
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
     if request.method == 'POST':
@@ -73,55 +77,51 @@ def transcribe():
         temp_dir = tempfile.mkdtemp()
         save_path = os.path.join(temp_dir, 'temp.wav')
 
-        print(save_path)
-
         wav_file = request.files['audio_data']
         wav_file.save(save_path)
 
         result = whisper_model.transcribe(save_path, language='english')
-        
+
         if result and result['text'] != '':
             print(result)
             processed_text = punctuation_remover(result['text'])
             processed_text = modify_consecutive_words(processed_text)
-            print (processed_text+'<<<<<<')
+            print(processed_text+'<<<<<<')
 
-            predicted_label= predict_label(processed_text,loaded_tokenizer,loaded_model)
+            predicted_label = int(predict_label(
+                processed_text, loaded_tokenizer, loaded_model))
             print(predicted_label)
 
-            # Play the corresponding audio file
-            play_audio(predicted_label)
-        
+            return jsonify({'text': result['text'], 'predicted_id': predicted_label})
 
-        return result['text']
-    else:
-        return "This endpoint only processes POST wav blob"
+            # Stream the corresponding audio file
+            # return stream_audio(predicted_label)
+        else:
+            print("This endpoint only processes POST wav blob")
+            return 'No audio to stream', 204
 
 
 def punctuation_remover(text):
-        # Split text into tokens
-        tokens = re.findall(r'\w+', text)
-        string = ' '.join(tokens).upper()
+    # Split text into tokens
+    tokens = re.findall(r'\w+', text)
+    string = ' '.join(tokens).upper()
 
-        return string
+    return string
+
 
 def modify_consecutive_words(input_string):
-        # Find consecutive occurrences of words (2 or more times)
-        pattern = r'\b(\w+)(?:\s+\1)+\b'
-        modified_string = re.sub(pattern, r'\1', input_string)
-        return modified_string
-    
-def play_audio(predicted_id):
-    # Assuming the audio files are located in the 'audio_files' directory
-    audio_file_path = os.path.join('./audio_files', f'{predicted_id}.mp3')
-    # print(audio_file_path)
-    pygame.mixer.init()
-    pygame.mixer.music.load(audio_file_path)
-    pygame.mixer.music.play()
+    # Find consecutive occurrences of words (2 or more times)
+    pattern = r'\b(\w+)(?:\s+\1)+\b'
+    modified_string = re.sub(pattern, r'\1', input_string)
+    return modified_string
 
-    print("Playing Audio")
-    
-    # Wait for the audio to finish playing
-    while pygame.mixer.music.get_busy():
-        continue
 
+@app.route('/audio/<predicted_id>', methods=['GET'])
+def stream_audio(predicted_id):
+    audio_file_path = os.path.join(
+        './audio_files', f'{predicted_id}.mp3')
+
+    print(audio_file_path)
+    print(f"Streaming Audio {predicted_id}.mp3")
+
+    return flask.send_file(audio_file_path, mimetype='audio/mp3')
