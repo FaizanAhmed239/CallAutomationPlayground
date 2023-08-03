@@ -62,7 +62,7 @@ def predict_label(input_string, tokenizer, model):
     # Convert the predicted one-hot encoded label back to the original ID
     predicted_id = int(np.argmax(predicted_labels, axis=-1)[0])
 
-    print(f"Predicted ID for '{input_string}': {predicted_id}\n\n")
+    print(f"Predicted ID for '{input_string}': {predicted_id}\n")
     return predicted_id
 
 
@@ -80,13 +80,14 @@ def transcribe():
         wav_file = request.files['audio_data']
         wav_file.save(save_path)
 
-        result = whisper_model.transcribe(save_path, language='english')
+        result = whisper_model.transcribe(
+            save_path, language='english', no_speech_threshold=0.450, logprob_threshold=-0.7)
 
         if result and result['text'] != '':
-            print(result)
             processed_text = punctuation_remover(result['text'])
             processed_text = modify_consecutive_words(processed_text)
-            print(processed_text+'<<<<<<')
+            print(result)
+            print("Processed Text:" + processed_text)
 
             predicted_label = int(predict_label(
                 processed_text, loaded_tokenizer, loaded_model))
@@ -94,8 +95,6 @@ def transcribe():
 
             return jsonify({'text': result['text'], 'predicted_id': predicted_label})
 
-            # Stream the corresponding audio file
-            # return stream_audio(predicted_label)
         else:
             print("This endpoint only processes POST wav blob")
             return 'No audio to stream', 204
