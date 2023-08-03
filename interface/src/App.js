@@ -110,18 +110,21 @@ const App = ({ classes }) => {
         headers,
       })
       .then((res) => {
-        setTranscribedData((oldData) => [...oldData, res.data.text]);
-        axios
-          .get(`http://0.0.0.0:8000/audio/${res.data.predicted_id}`, {
-            responseType: "arraybuffer",
-          })
-          .then((res) => {
-            const audioBlob = new Blob([res.data], { type: "audio/mp3" });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audio.play();
-            setIsTranscribing(false);
-          });
+        if (res.data.predicted_id !== undefined) {
+          setTranscribedData((oldData) => [...oldData, res.data.text]);
+
+          axios
+            .get(`http://0.0.0.0:8000/audio/${res.data.predicted_id}`, {
+              responseType: "arraybuffer",
+            })
+            .then((res) => {
+              const audioBlob = new Blob([res.data], { type: "audio/mp3" });
+              const audioUrl = URL.createObjectURL(audioBlob);
+              const audio = new Audio(audioUrl);
+              audio.play();
+            });
+        }
+        setIsTranscribing(false);
       });
 
     if (!stopTranscriptionSessionRef.current) {
