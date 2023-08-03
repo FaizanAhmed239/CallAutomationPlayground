@@ -4,7 +4,6 @@ import Typography from "@material-ui/core/Typography";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import TranscribeOutput from "./TranscribeOutput";
-import SettingsSections from "./SettingsSection";
 import { ReactMic } from "react-mic";
 import axios from "axios";
 import { PulseLoader } from "react-spinners";
@@ -22,6 +21,7 @@ const useStyles = () => ({
   },
   title: {
     marginBottom: "30px",
+    textDecoration: "underline",
   },
   settingsSection: {
     marginBottom: "20px",
@@ -48,125 +48,11 @@ const App = ({ classes }) => {
   const [interimTranscribedData] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState("english");
-  const [selectedModel, setSelectedModel] = useState(1);
-  const [transcribeTimeout, setTranscribeTimout] = useState(5);
   const [stopTranscriptionSession, setStopTranscriptionSession] =
     useState(false);
   const [isFirstPressedText, setIsFirstPressedText] = useState(true);
-
   const stopTranscriptionSessionRef = useRef(stopTranscriptionSession);
   stopTranscriptionSessionRef.current = stopTranscriptionSession;
-
-  const selectedLangRef = useRef(selectedLanguage);
-  selectedLangRef.current = selectedLanguage;
-
-  const selectedModelRef = useRef(selectedModel);
-  selectedModelRef.current = selectedModel;
-
-  const supportedLanguages = [
-    "english",
-    "chinese",
-    "german",
-    "spanish",
-    "russian",
-    "korean",
-    "french",
-    "japanese",
-    "portuguese",
-    "turkish",
-    "polish",
-    "catalan",
-    "dutch",
-    "arabic",
-    "swedish",
-    "italian",
-    "indonesian",
-    "hindi",
-    "finnish",
-    "vietnamese",
-    "hebrew",
-    "ukrainian",
-    "greek",
-    "malay",
-    "czech",
-    "romanian",
-    "danish",
-    "hungarian",
-    "tamil",
-    "norwegian",
-    "thai",
-    "urdu",
-    "croatian",
-    "bulgarian",
-    "lithuanian",
-    "latin",
-    "maori",
-    "malayalam",
-    "welsh",
-    "slovak",
-    "telugu",
-    "persian",
-    "latvian",
-    "bengali",
-    "serbian",
-    "azerbaijani",
-    "slovenian",
-    "kannada",
-    "estonian",
-    "macedonian",
-    "breton",
-    "basque",
-    "icelandic",
-    "armenian",
-    "nepali",
-    "mongolian",
-    "bosnian",
-    "kazakh",
-    "albanian",
-    "swahili",
-    "galician",
-    "marathi",
-    "punjabi",
-    "sinhala",
-    "khmer",
-    "shona",
-    "yoruba",
-    "somali",
-    "afrikaans",
-    "occitan",
-    "georgian",
-    "belarusian",
-    "tajik",
-    "sindhi",
-    "gujarati",
-    "amharic",
-    "yiddish",
-    "lao",
-    "uzbek",
-    "faroese",
-    "haitian creole",
-    "pashto",
-    "turkmen",
-    "nynorsk",
-    "maltese",
-    "sanskrit",
-    "luxembourgish",
-    "myanmar",
-    "tibetan",
-    "tagalog",
-    "malagasy",
-    "assamese",
-    "tatar",
-    "hawaiian",
-    "lingala",
-    "hausa",
-    "bashkir",
-    "javanese",
-    "sundanese",
-  ];
-
-  const modelOptions = ["tiny", "base", "small", "medium", "large", "large-v1"];
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -194,10 +80,6 @@ const App = ({ classes }) => {
     }
   };
 
-  function handleTranscribeTimeoutChange(newTimeout) {
-    setTranscribeTimout(newTimeout);
-  }
-
   function startRecording() {
     setStopTranscriptionSession(false);
   }
@@ -220,14 +102,26 @@ const App = ({ classes }) => {
       "content-type": "multipart/form-data",
     };
     const formData = new FormData();
-    formData.append("language", selectedLangRef.current);
-    formData.append("model_size", modelOptions[selectedModelRef.current]);
+    formData.append("language", "english");
+    formData.append("model_size", "large");
     formData.append("audio_data", recordedBlob.blob, "temp_recording");
     axios
-      .post("http://0.0.0.0:8000/transcribe", formData, { headers })
+      .post("http://0.0.0.0:8000/transcribe", formData, {
+        headers,
+      })
       .then((res) => {
-        setTranscribedData((oldData) => [...oldData, res.data]);
-        setIsTranscribing(false);
+        setTranscribedData((oldData) => [...oldData, res.data.text]);
+        axios
+          .get(`http://0.0.0.0:8000/audio/${res.data.predicted_id}`, {
+            responseType: "arraybuffer",
+          })
+          .then((res) => {
+            const audioBlob = new Blob([res.data], { type: "audio/mp3" });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+            setIsTranscribing(false);
+          });
       });
 
     if (!stopTranscriptionSessionRef.current) {
@@ -238,25 +132,7 @@ const App = ({ classes }) => {
   return (
     <div className={classes.root}>
       <div className={classes.title}>
-        <Typography variant="h3">
-          Call Automation Playground{" "}
-          <span role="img" aria-label="microphone-emoji">
-            🎤
-          </span>
-        </Typography>
-      </div>
-      <div className={classes.settingsSection}>
-        <SettingsSections
-          disabled={isTranscribing || isRecording}
-          possibleLanguages={supportedLanguages}
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={setSelectedLanguage}
-          modelOptions={modelOptions}
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
-          transcribeTimeout={transcribeTimeout}
-          onTranscribeTiemoutChanged={handleTranscribeTimeoutChange}
-        />
+        <Typography variant="h3">Call Automation Playground </Typography>
       </div>
 
       {!isFirstPressedText && !isRecording && (
