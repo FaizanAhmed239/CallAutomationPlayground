@@ -43,6 +43,8 @@ const useStyles = () => ({
   },
 });
 
+const serverUrl = process.env.REACT_APP_BACKEND_SERVER_URL;
+
 const App = ({ classes }) => {
   const [transcribedData, setTranscribedData] = useState([]);
   const [interimTranscribedData] = useState("");
@@ -106,7 +108,7 @@ const App = ({ classes }) => {
     formData.append("model_size", "large");
     formData.append("audio_data", recordedBlob.blob, "temp_recording");
     axios
-      .post("http://0.0.0.0:8000/transcribe", formData, {
+      .post(`http://${serverUrl}/transcribe`, formData, {
         headers,
       })
       .then((res) => {
@@ -114,7 +116,7 @@ const App = ({ classes }) => {
           setTranscribedData((oldData) => [...oldData, res.data.text]);
 
           axios
-            .get(`http://0.0.0.0:8000/audio/${res.data.predicted_id}`, {
+            .get(`http://${serverUrl}/audio/${res.data.predicted_id}`, {
               responseType: "arraybuffer",
             })
             .then((res) => {
