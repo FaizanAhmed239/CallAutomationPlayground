@@ -81,7 +81,7 @@ def transcribe():
         wav_file.save(save_path)
 
         result = whisper_model.transcribe(
-            save_path, language='english', no_speech_threshold=0.450, logprob_threshold=-0.7)
+            save_path, language='english')
 
         if result and result['text'] != '':
             processed_text = punctuation_remover(result['text'])
