@@ -1,5 +1,6 @@
 import pandas as pd
 import keras
+import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Model
@@ -35,13 +36,6 @@ def load_model_and_tokenizer():
     whisper_model = whisper.load_model("large")
 
     if loaded_model is None and loaded_tokenizer is None:
-        # Load the model from the file
-        # loaded_model = load_model(
-        #     './my_model_2023-07-26_accuracy_0.941_loss_0.314_10.h5')
-        # # Load the saved tokenizer
-        # with open('./tokenizer_2023-07-26_accuracy_0.941_loss_0.314_10.pkl', 'rb') as f:
-        #     loaded_tokenizer = pickle.load(f)
-        # Load the fine-tuned model and tokenizer
         model_dir = "model_details/"
         loaded_model = TFBertForSequenceClassification.from_pretrained(
             model_dir)
@@ -51,47 +45,13 @@ def load_model_and_tokenizer():
 
 def predict_label(input_string, tokenizer, model):
 
-    new_input_tokens = tokenizer.encode(input_string, add_special_tokens=True)
+    inputs = tokenizer.encode_plus(
+        input_string, add_special_tokens=True, return_tensors="tf")
+    predictions = model(inputs["input_ids"])[0]
+    predicted_class_index = tf.argmax(predictions, axis=1).numpy()[0]
+    print("Predicted Response Audio:", predicted_class_index)
 
-    # Find the max_sequence_length from the new input tokens
-    max_sequence_length = len(new_input_tokens)
-
-    # Pad the sequence to match the same length as the sequences used during training
-    new_input_sequence = pad_sequences(
-        [new_input_tokens], maxlen=max_sequence_length, padding='post')
-
-    # Make predictions using the trained model
-    predicted_labels = model.predict(new_input_sequence)
-
-    # Convert the predicted one-hot encoded label back to the original ID
-    # predicted_id = int(np.argmax(predicted_labels[loaded_model], axis=-1)[0])
-    predicted_id = int(np.argmax(predicted_labels, axis=-1))
-
-    print(f"Predicted ID for '{input_string}': {predicted_id}")
-    return predicted_id
-    # # Tokenize the new input string and convert it into a sequence of indices
-    # new_input_tokens = tokenizer.texts_to_sequences([input_string])
-
-    # # Find the max_sequence_length from the new input tokens (assuming new_input_tokens is your list of input sequences)
-    # # max_sequence_length = max(len(seq) for seq in new_input_tokens)
-    # max_sequence_length = 10
-
-    # # Pad the sequence to match the same length as the sequences used during training
-    # new_input_sequence = pad_sequences(
-    #     new_input_tokens, maxlen=max_sequence_length, padding='post')
-
-    # # Add an extra dimension to the input data (samples, timesteps, features)
-    # new_input_sequence = new_input_sequence.reshape(-1, max_sequence_length, 1)
-
-    # # Make predictions using the trained model
-    # predicted_labels = model.predict(new_input_sequence)
-
-    # # Convert the predicted one-hot encoded label back to the original ID
-    # predicted_id = int(np.argmax(predicted_labels, axis=-1)[0])
-
-    # print(f"Predicted ID for '{input_string}': {predicted_id}\n")
-    # return predicted_id
-    # Tokenize the new input string and convert it into a sequence of indices
+    return predicted_class_index
 
 
 # Call the function to load the model and tokenizer when the script starts
@@ -115,10 +75,10 @@ def transcribe():
             processed_text = punctuation_remover(result['text'])
             processed_text = modify_consecutive_words(processed_text)
             print(result)
-            # print("Processed Text:" + processed_text)
+            print("Processed Text:" + processed_text)
 
-            predicted_label = predict_label(
-                processed_text, loaded_tokenizer, loaded_model)
+            predicted_label = int(predict_label(
+                result['text'], loaded_tokenizer, loaded_model))
             print(predicted_label)
 
             return jsonify({'text': result['text'], 'predicted_id': predicted_label})
